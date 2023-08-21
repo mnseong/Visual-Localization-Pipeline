@@ -4,6 +4,7 @@ import torch
 import PIL.Image
 from tqdm import tqdm
 import pycolmap
+import sys
 
 from ...utils.read_write_model import write_model, read_model
 
@@ -116,13 +117,19 @@ def correct_sfm_with_gt_depth(sfm_path, depth_folder_path, output_path):
 
 
 if __name__ == '__main__':
+    sys.setrecursionlimit(10**4)
+    
     dataset = Path('datasets/7scenes')
     outputs = Path('outputs/7Scenes')
 
     SCENES = ['chess', 'fire', 'heads', 'office', 'pumpkin',
               'redkitchen', 'stairs']
     for scene in SCENES:
+        print('this')
         sfm_path = outputs / scene / 'sfm_superpoint+superglue'
         depth_path = dataset / f'depth/7scenes_{scene}/train/depth'
+        #depth_path = dataset / scene / 'mapping' / 'sensors' / 'records_data' / 'seq-01'
         output_path = outputs / scene / 'sfm_superpoint+superglue+depth'
         correct_sfm_with_gt_depth(sfm_path, depth_path, output_path)
+        break
+        

@@ -7,9 +7,9 @@ from ... import pairs_from_covisibility, pairs_from_retrieval, localize_sfm
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', type=Path, default='datasets/aachen_v1.1',
+parser.add_argument('--dataset', type=Path, default='datasets/aachen_v1.1_final',
                     help='Path to the dataset, default: %(default)s')
-parser.add_argument('--outputs', type=Path, default='outputs/aachen_v1.1',
+parser.add_argument('--outputs', type=Path, default='outputs/aachen_v1.1_final',
                     help='Path to the output directory, default: %(default)s')
 parser.add_argument('--num_covis', type=int, default=20,
                     help='Number of image pairs for SfM, default: %(default)s')
@@ -25,34 +25,34 @@ sift_sfm = dataset / '3D-models/aachen_v_1_1'
 outputs = args.outputs  # where everything will be saved
 reference_sfm = outputs / 'sfm_superpoint+superglue'  # the SfM model we will build
 sfm_pairs = outputs / f'pairs-db-covis{args.num_covis}.txt'  # top-k most covisible in SIFT model
-loc_pairs = outputs / f'pairs-query-netvlad{args.num_loc}.txt'  # top-k retrieved by NetVLAD
+#sfm_pairs = outputs / 'pairs-sfm.txt'  # top-k most covisible in SIFT model
+loc_pairs = outputs / 'pairs-query-cosplace{args.num_loc}.txt'  # top-k retrieved by cosplace
 results = outputs / f'Aachen-v1.1_hloc_superpoint+superglue_netvlad{args.num_loc}.txt'
 
 # list the standard configurations available
-print(f'Configs for feature extractors:\n{pformat(extract_features.confs)}')
-print(f'Configs for feature matchers:\n{pformat(match_features.confs)}')
+# print(f'Configs for feature extractors:\n{pformat(extract_features.confs)}')
+# print(f'Configs for feature matchers:\n{pformat(match_features.confs)}')
 
 # pick one of the configurations for extraction and matching
-retrieval_conf = extract_features.confs['netvlad']
+retrieval_conf = extract_features.confs['cosplace']
 feature_conf = extract_features.confs['superpoint_max']
 matcher_conf = match_features.confs['superglue']
 
-features = extract_features.main(feature_conf, images, outputs)
+#features = extract_features.main(feature_conf, images, outputs)
+features = outputs / 'feats-superpoint-n4096-rmax1600.h5'
 
-pairs_from_covisibility.main(
-    sift_sfm, sfm_pairs, num_matched=args.num_covis)
-sfm_matches = match_features.main(
-    matcher_conf, sfm_pairs, feature_conf['output'], outputs)
+pairs_from_covisibility.main(sift_sfm, sfm_pairs, num_matched=args.num_covis)
+sfm_matches = match_features.main(matcher_conf, sfm_pairs, feature_conf['output'], outputs)
 
-triangulation.main(
-    reference_sfm,
-    sift_sfm,
-    images,
-    sfm_pairs,
-    features,
-    sfm_matches)
+#triangulation.main(
+#    reference_sfm,
+#    sift_sfm,
+#    images,
+#    sfm_pairs,
+#    features,
+#    sfm_matches)
 
-global_descriptors = extract_features.main(retrieval_conf, images, outputs)
+#global_descriptors = extract_features.main(retrieval_conf, images, outputs)
 pairs_from_retrieval.main(
     global_descriptors, loc_pairs, args.num_loc,
     query_prefix='query', db_model=reference_sfm)

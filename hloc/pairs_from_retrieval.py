@@ -75,20 +75,28 @@ def main(descriptors, output, num_matched,
     # We handle multiple reference feature files.
     # We only assume that names are unique among them and map names to files.
     if db_descriptors is None:
+        print(1)
         db_descriptors = descriptors
     if isinstance(db_descriptors, (Path, str)):
+        print(2)
         db_descriptors = [db_descriptors]
+    print(3)
     name2db = {n: i for i, p in enumerate(db_descriptors)
                for n in list_h5_names(p)}
+    print(4)
     db_names_h5 = list(name2db.keys())
+    print(5)
     query_names_h5 = list_h5_names(descriptors)
 
     if db_model:
+        print(6)
         images = read_images_binary(db_model / 'images.bin')
         db_names = [i.name for i in images.values()]
     else:
+        print(7)
         db_names = parse_names(db_prefix, db_list, db_names_h5)
     if len(db_names) == 0:
+        print(8)
         raise ValueError('Could not find any database image.')
     query_names = parse_names(query_prefix, query_list, query_names_h5)
 

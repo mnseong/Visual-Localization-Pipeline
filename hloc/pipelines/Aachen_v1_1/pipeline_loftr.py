@@ -23,7 +23,7 @@ images = dataset / 'images_upright/'
 sift_sfm = dataset / '3D-models/aachen_v_1_1'
 
 outputs = args.outputs  # where everything will be saved
-outputs.mkdir()
+# outputs.mkdir()
 reference_sfm = outputs / 'sfm_loftr'  # the SfM model we will build
 sfm_pairs = outputs / f'pairs-db-covis{args.num_covis}.txt'  # top-k most covisible in SIFT model
 loc_pairs = outputs / f'pairs-query-netvlad{args.num_loc}.txt'  # top-k retrieved by NetVLAD
@@ -31,6 +31,8 @@ results = outputs / f'Aachen-v1.1_hloc_loftr_netvlad{args.num_loc}.txt'
 
 # list the standard configurations available
 print(f'Configs for dense feature matchers:\n{pformat(match_dense.confs)}')
+
+print(12345)
 
 # pick one of the configurations for extraction and matching
 retrieval_conf = extract_features.confs['netvlad']

@@ -61,9 +61,12 @@ def read_nvm_model(
 
     nvm_f = open(nvm_path, 'r')
     line = nvm_f.readline()
-    while line == '\n' or line.startswith('NVM_V3'):
+    while line == ' \n' or line.startswith('NVM_V3'):
         line = nvm_f.readline()
     num_images = int(line)
+    print(num_images)
+    print("--------------------")
+    print(len(cameras))
     assert num_images == len(cameras)
 
     logger.info(f'Reading {num_images} images...')
