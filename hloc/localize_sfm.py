@@ -130,7 +130,7 @@ def main(reference_sfm: Union[Path, pycolmap.Reconstruction],
          matches: Path,
          results: Path,
          ransac_thresh: int = 12,
-         covisibility_clustering: bool = False,
+         covisibility_clustering: bool = True,
          prepend_camera_name: bool = False,
          config: Dict = None):
 
