@@ -10,6 +10,7 @@ from tqdm import tqdm
 import pprint
 import collections.abc as collections
 import PIL.Image
+from PIL import Image
 import glob
 
 from . import extractors, logger
@@ -159,7 +160,7 @@ def resize_image(image, size, interp):
         raise ValueError(
             f'Unknown interpolation {interp}.')
     return resized
-
+    
 
 class ImageDataset(torch.utils.data.Dataset):
     default_conf = {
@@ -167,7 +168,7 @@ class ImageDataset(torch.utils.data.Dataset):
         'grayscale': False,
         'resize_max': None,
         'resize_force': False,
-        'interpolation': 'cv2_area',  # pil_linear is more accurate but slower
+        'interpolation': 'pil_linear',  # pil_linear is more accurate but slower
     }
 
     def __init__(self, root, conf, paths=None):
@@ -182,7 +183,13 @@ class ImageDataset(torch.utils.data.Dataset):
             if len(paths) == 0:
                 raise ValueError(f'Could not find any image in root: {root}.')
             paths = sorted(set(paths))
-            self.names = [Path(p).relative_to(root).as_posix() for p in paths]
+            self.names = []
+            # self.names = [Path(p).relative_to(root).as_posix() for p in paths]
+            for p in paths:
+                if 'depth' in p:
+                    continue
+                else:
+                    self.names.append(Path(p).relative_to(root).as_posix())
             logger.info(f'Found {len(self.names)} images in root {root}.')
         else:
             if isinstance(paths, (Path, str)):
@@ -194,6 +201,8 @@ class ImageDataset(torch.utils.data.Dataset):
                 raise ValueError(f'Unknown format for path argument {paths}.')
 
             for name in self.names:
+                if 'depth' in name:
+                    self.names.remove(name)
                 if not (root / name).exists():
                     raise ValueError(
                         f'Image {name} does not exists in root: {root}.')
