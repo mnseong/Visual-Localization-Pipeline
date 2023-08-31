@@ -20,28 +20,57 @@ import torch.optim as optim
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-class AttentionMetric(nn.Module):
+class MyMetric(nn.Module):
     def __init__(self, input_dim, hidden_dim):
-        super(AttentionMetric, self).__init__()
-
-        self.softplus = nn.Softplus()
-        
-        # Attention Mechanism
-        self.attention_layer = nn.Sequential(
-            # nn.Linear(input_dim, hidden_dim),
-            nn.Tanh(),
-            # nn.Linear(hidden_dim, 1)
-        )
+        super(MyMetric, self).__init__()
         
     def forward(self, descriptor1, descriptor2):
-        # Calculate similarity metric (e.g., cosine similarity)
         similarity = torch.cosine_similarity(descriptor1, descriptor2, dim=1)
         # similarity = torch.einsum('id,jd->ij', descriptor1.to(device), descriptor2.to(device))
-        # print(similarity)
+        return similarity
+
+def normalize_and_hadamard_product(tensor1, tensor2):
+    # 입력 텐서를 [0, 2] 범위로 정규화
+    tensor1_normalized = (tensor1 - tensor1.min()) / (tensor1.max() - tensor1.min()) * 2
+    tensor2_normalized = (tensor2 - tensor2.min()) / (tensor2.max() - tensor2.min()) * 2
+    
+    # 아다마르 곱 계산
+    result = torch.einsum('ij,ij->ij', tensor1_normalized, tensor2_normalized)
+    
+    return result
+
+
+
+
+def pre_normalize(tensor1, tensor2):
+        tensor1_normalized = (tensor1 - tensor1.min()) / (tensor1.max() - tensor1.min()) * 2
+        tensor2_normalized = (tensor2 - tensor2.min()) / (tensor2.max() - tensor2.min()) * 2
+        return tensor1_normalized, tensor2_normalized
+
+def hadamard(tensor1, tensor2):
+    return tensor1 * tensor2
+
+def post_normalize(tensor1, tensor2):
+    normalized = (tensor1 - tensor1.min()) / (tensor1.max() - tensor1.min())
+
+
+class Compute_Metric(nn.Module):
+    def __init__(self, input_dim, hidden_dim):
+        super(Compute_Metric, self).__init__()
+        self.pre_normalize = Normalize02()
+        self.post_normalize = Normalize01()
+        self.hadamard = Hadamard()
+
+    def forward(self, descriptor1, descriptor2):
+        x, y = pre_normalize(descriptor1, descriptor2)
+        w = hadamard(x, y)
+        w = post_normalize(w)
+        similarity = torch.cosine_similarity(descriptor1 * w, descriptor2 * w, dim=1)
         return similarity
 
 
-def compute_scores(emb_one, emb_two):
+def compute_scores(desc_1, desc_2):
+    
     """Computes cosine similarity between two vectors."""
     scores = torch.nn.functional.cosine_similarity(emb_one, emb_two)
     return scores.numpy().tolist()
@@ -84,7 +113,8 @@ class MinseongNet(nn.Module):
             L2Norm(),
             GeM(),
             Flatten(),
-            L2Norm()
+            L2Norm(),
+            # nn.Linear(2048, self.features_dim)
         )
     
     def forward(self, x):
@@ -97,7 +127,7 @@ class MinseongNet(nn.Module):
 
 
 def extract_global_feature(image_path):
-    dataset_path = "/mnt/hdd4T/minseong/Hierarchical-Localization/datasets/Aachen-Day-Night-v1.1/"
+    dataset_path = "/mnt/hdd4T/minseong/Visual-Localization-Pipeline/datasets/etri12/"
     image_path = dataset_path + image_path
     
     # Load the image
@@ -115,9 +145,8 @@ def extract_global_feature(image_path):
     img_tensor = img_tensor.unsqueeze(0)  # Add batch dimension
     
     # Initialize MinseongNet with the specified backbone
-    net = MinseongNet()
+    net = MinseongNet().eval()
     net.to(device)
-    net.eval()
     
     # Extract global feature from the model's output
     with torch.no_grad():
@@ -126,15 +155,9 @@ def extract_global_feature(image_path):
     return features
 
 
-# def find_similarity(anchor_path, ref_list):
-#     anchor_d = extract_global_feature(anchor_path)
-#     for i, path in enumerate(ref_list):
-#         tmp_d = 
-
-
 def verify_similarity(image_path1, image_path2):
     input_dim = 2048  # Dimension of global features
-    hidden_dim = 256  # Hidden dimension for attention mechanism
+    hidden_dim = 128  # Hidden dimension for attention mechanism
     
     # Extract global features from images
     global_feature1 = extract_global_feature(image_path1)
@@ -143,7 +166,7 @@ def verify_similarity(image_path1, image_path2):
     # print(global_feature2.shape)
     
     # Initialize the metric function
-    metric = AttentionMetric(input_dim, hidden_dim)
+    metric = MyMetric(input_dim, hidden_dim)
     
     # Calculate similarity using the metric
     similarity = metric(global_feature1, global_feature2)
@@ -186,21 +209,16 @@ def main(
 
     pairs = []
 
-    # for i, n1 in enumerate(tqdm(names_q)):
-    #     trainer = TrainSimilarDescriptor(n1, names_ref)
-    #     n1, n2 = trainer.train()
-        
-
     for i, n1 in enumerate(tqdm(names_q)):
         for j, n2 in enumerate(tqdm(names_ref)):
             if self_matching and j <= i:
                 continue
             similarity = verify_similarity(n1, n2)
             # print(similarity[0])
-            if similarity[0] >= 0.7:
-                print((n1, n2))
+            if similarity[0] >= 0.6:
+                print((n1, n2), "==> Pairing!")
+                print("Similarity: ", similarity[0])
                 pairs.append((n1, n2))
-                break
 
     logger.info(f'Found {len(pairs)} pairs.')
     with open(output, 'w') as f:
